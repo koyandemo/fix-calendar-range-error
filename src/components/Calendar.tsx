@@ -1,10 +1,18 @@
 
 import React, { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameDay, isWithinInterval, parseISO } from 'date-fns';
+import dayjs from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import isSameDay from 'dayjs/plugin/isSameDay';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+
+// Initialize dayjs plugins
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameDay);
 
 interface Event {
   id: string;
@@ -25,24 +33,30 @@ const Calendar: React.FC<CalendarProps> = ({
   events = [], 
   onEventClick 
 }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(dayjs());
   const [animationDirection, setAnimationDirection] = useState<'left' | 'right' | null>(null);
 
-  const firstDayOfMonth = startOfMonth(currentMonth);
-  const lastDayOfMonth = endOfMonth(currentMonth);
-  const daysInMonth = eachDayOfInterval({ start: firstDayOfMonth, end: lastDayOfMonth });
+  const firstDayOfMonth = currentMonth.startOf('month');
+  const lastDayOfMonth = currentMonth.endOf('month');
+  
+  // Generate days in month
+  const daysInMonth = [];
+  let currentDay = firstDayOfMonth;
+  while (currentDay.isSameOrBefore(lastDayOfMonth, 'day')) {
+    daysInMonth.push(currentDay);
+    currentDay = currentDay.add(1, 'day');
+  }
 
   // Calculate days from previous month to fill the first row
-  const startDay = firstDayOfMonth.getDay();
+  const startDay = firstDayOfMonth.day();
   
-  // Calculate days from next month to fill the last row
-  const endDay = lastDayOfMonth.getDay();
+  // Calculate total cells needed for a complete calendar view
   const totalCells = Math.ceil((daysInMonth.length + startDay) / 7) * 7;
   
   const goToPreviousMonth = () => {
     setAnimationDirection('right');
     setTimeout(() => {
-      setCurrentMonth(subMonths(currentMonth, 1));
+      setCurrentMonth(currentMonth.subtract(1, 'month'));
       setAnimationDirection(null);
     }, 200);
   };
@@ -50,24 +64,24 @@ const Calendar: React.FC<CalendarProps> = ({
   const goToNextMonth = () => {
     setAnimationDirection('left');
     setTimeout(() => {
-      setCurrentMonth(addMonths(currentMonth, 1));
+      setCurrentMonth(currentMonth.add(1, 'month'));
       setAnimationDirection(null);
     }, 200);
   };
 
   const goToToday = () => {
-    setCurrentMonth(new Date());
+    setCurrentMonth(dayjs());
     toast.success("Calendar set to current month");
   };
 
-  const getEventsForDay = (day: Date) => {
+  const getEventsForDay = (day: dayjs.Dayjs) => {
     return events.filter(event => {
       // Handle the case where startDate and endDate might be strings (from API)
-      const startDate = event.startDate instanceof Date ? event.startDate : new Date(event.startDate);
-      const endDate = event.endDate instanceof Date ? event.endDate : new Date(event.endDate);
+      const startDate = dayjs(event.startDate);
+      const endDate = dayjs(event.endDate);
       
       // Check if the day is within the event's date range (inclusive)
-      return isWithinInterval(day, { start: startDate, end: endDate });
+      return day.isSameOrAfter(startDate, 'day') && day.isSameOrBefore(endDate, 'day');
     });
   };
 
@@ -75,8 +89,8 @@ const Calendar: React.FC<CalendarProps> = ({
     if (onEventClick) {
       onEventClick(event);
     } else {
-      const startDateStr = format(new Date(event.startDate), 'MMM d');
-      const endDateStr = format(new Date(event.endDate), 'MMM d');
+      const startDateStr = dayjs(event.startDate).format('MMM D');
+      const endDateStr = dayjs(event.endDate).format('MMM D');
       const dateRange = startDateStr === endDateStr 
         ? startDateStr 
         : `${startDateStr} - ${endDateStr}`;
@@ -106,7 +120,7 @@ const Calendar: React.FC<CalendarProps> = ({
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="text-xl font-semibold">
-            {format(currentMonth, 'MMMM yyyy')}
+            {currentMonth.format('MMMM YYYY')}
           </h2>
           <Button 
             variant="outline" 
@@ -139,14 +153,13 @@ const Calendar: React.FC<CalendarProps> = ({
         
         {Array.from({ length: totalCells }).map((_, index) => {
           const dayIndex = index - startDay;
-          const date = new Date(currentMonth);
-          date.setDate(1 + dayIndex);
+          const date = firstDayOfMonth.add(dayIndex, 'day');
           
           // Check if it's current month
-          const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
+          const isCurrentMonth = date.month() === currentMonth.month();
           
           // Check if it's today
-          const isToday = isSameDay(date, new Date());
+          const isToday = date.isSame(dayjs(), 'day');
           
           const dayEvents = getEventsForDay(date);
           
@@ -161,14 +174,14 @@ const Calendar: React.FC<CalendarProps> = ({
               <div className={cn("calendar-day-number text-right text-xs p-1", {
                 "font-bold text-blue-500": isToday
               })}>
-                {format(date, 'd')}
+                {date.format('D')}
               </div>
               <div className="overflow-hidden space-y-1">
                 {dayEvents.map((event) => {
                   // Check if this is the first day of the event
-                  const isFirstDay = isSameDay(date, new Date(event.startDate));
+                  const isFirstDay = dayjs(event.startDate).isSame(date, 'day');
                   // Check if this is the last day of the event
-                  const isLastDay = isSameDay(date, new Date(event.endDate));
+                  const isLastDay = dayjs(event.endDate).isSame(date, 'day');
                   
                   // Apply different styles based on position in the event
                   const eventStyle = cn(

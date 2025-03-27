@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Calendar from '@/components/Calendar';
 import { events } from '@/data/events';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import dayjs from 'dayjs';
 
 const Index = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -11,8 +11,8 @@ const Index = () => {
   const handleEventClick = (event) => {
     setSelectedEvent(event);
     
-    const startDate = format(new Date(event.startDate), 'MMM d');
-    const endDate = format(new Date(event.endDate), 'MMM d');
+    const startDate = dayjs(event.startDate).format('MMM D');
+    const endDate = dayjs(event.endDate).format('MMM D');
     const dateRange = startDate === endDate 
       ? startDate 
       : `${startDate} - ${endDate}`;
