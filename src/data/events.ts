@@ -5,7 +5,7 @@ export const events = [
     id: '1',
     title: 'ZW3100 - Subaru - Others',
     startDate: new Date(2024, 2, 27), // March 27, 2024
-    endDate: new Date(2024, 2, 28), // March 28, 2024
+    endDate: new Date(2024, 2, 31), // March 31, 2024
     category: 'Subaru'
   },
   {
