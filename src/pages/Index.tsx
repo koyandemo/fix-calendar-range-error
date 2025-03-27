@@ -3,14 +3,22 @@ import { useState } from 'react';
 import Calendar from '@/components/Calendar';
 import { events } from '@/data/events';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 const Index = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   const handleEventClick = (event) => {
     setSelectedEvent(event);
+    
+    const startDate = format(new Date(event.startDate), 'MMM d');
+    const endDate = format(new Date(event.endDate), 'MMM d');
+    const dateRange = startDate === endDate 
+      ? startDate 
+      : `${startDate} - ${endDate}`;
+      
     toast.info(`Selected: ${event.title}`, {
-      description: `Category: ${event.category || 'General'}`
+      description: `${dateRange}, ${event.category || 'General'}`
     });
   };
 

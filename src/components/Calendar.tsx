@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameDay, isWithinInterval, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 interface Event {
   id: string;
   title: string;
-  date: Date;
+  startDate: Date;
+  endDate: Date;
   category?: string;
 }
 
@@ -60,15 +61,28 @@ const Calendar: React.FC<CalendarProps> = ({
   };
 
   const getEventsForDay = (day: Date) => {
-    return events.filter(event => isSameDay(new Date(event.date), day));
+    return events.filter(event => {
+      // Handle the case where startDate and endDate might be strings (from API)
+      const startDate = event.startDate instanceof Date ? event.startDate : new Date(event.startDate);
+      const endDate = event.endDate instanceof Date ? event.endDate : new Date(event.endDate);
+      
+      // Check if the day is within the event's date range (inclusive)
+      return isWithinInterval(day, { start: startDate, end: endDate });
+    });
   };
 
   const handleEventClick = (event: Event) => {
     if (onEventClick) {
       onEventClick(event);
     } else {
+      const startDateStr = format(new Date(event.startDate), 'MMM d');
+      const endDateStr = format(new Date(event.endDate), 'MMM d');
+      const dateRange = startDateStr === endDateStr 
+        ? startDateStr 
+        : `${startDateStr} - ${endDateStr}`;
+        
       toast.info(`Event: ${event.title}`, {
-        description: format(new Date(event.date), 'EEEE, MMMM do yyyy')
+        description: `${dateRange}, ${event.category || 'General'}`
       });
     }
   };
@@ -81,7 +95,7 @@ const Calendar: React.FC<CalendarProps> = ({
 
   return (
     <div className="calendar-container p-4">
-      <div className="calendar-controls">
+      <div className="calendar-controls flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
@@ -113,12 +127,12 @@ const Calendar: React.FC<CalendarProps> = ({
         </Button>
       </div>
       
-      <div className={cn("calendar-grid transition-opacity duration-200", {
+      <div className={cn("calendar-grid grid grid-cols-7 gap-1", {
         'opacity-0': animationDirection !== null,
         'opacity-100': animationDirection === null
       })}>
         {DAYS_OF_WEEK.map((day) => (
-          <div key={day} className="calendar-header">
+          <div key={day} className="calendar-header text-center text-xs font-medium text-gray-500 py-2">
             {day}
           </div>
         ))}
@@ -139,24 +153,49 @@ const Calendar: React.FC<CalendarProps> = ({
           return (
             <div 
               key={index} 
-              className={cn("calendar-cell", {
+              className={cn("calendar-cell p-1 border border-gray-100 min-h-[80px] relative", {
                 "opacity-40": !isCurrentMonth,
-                "calendar-today": isToday
+                "bg-blue-50": isToday
               })}
             >
-              <div className="calendar-day-number">
+              <div className={cn("calendar-day-number text-right text-xs p-1", {
+                "font-bold text-blue-500": isToday
+              })}>
                 {format(date, 'd')}
               </div>
-              <div className="overflow-hidden">
-                {dayEvents.map((event) => (
-                  <div 
-                    key={event.id} 
-                    className="calendar-event"
-                    onClick={() => handleEventClick(event)}
-                  >
-                    {event.title}
-                  </div>
-                ))}
+              <div className="overflow-hidden space-y-1">
+                {dayEvents.map((event) => {
+                  // Check if this is the first day of the event
+                  const isFirstDay = isSameDay(date, new Date(event.startDate));
+                  // Check if this is the last day of the event
+                  const isLastDay = isSameDay(date, new Date(event.endDate));
+                  
+                  // Apply different styles based on position in the event
+                  const eventStyle = cn(
+                    "calendar-event text-xs p-1 truncate cursor-pointer text-white",
+                    {
+                      "rounded-l-md": isFirstDay,
+                      "rounded-r-md": isLastDay,
+                      "rounded-none": !isFirstDay && !isLastDay,
+                      // Use different background colors for different categories
+                      "bg-blue-500": event.category === 'Work',
+                      "bg-green-500": event.category === 'Marketing',
+                      "bg-purple-500": event.category === 'Client',
+                      "bg-red-500": event.category === 'Subaru',
+                      "bg-gray-500": !event.category,
+                    }
+                  );
+                  
+                  return (
+                    <div 
+                      key={event.id} 
+                      className={eventStyle}
+                      onClick={() => handleEventClick(event)}
+                    >
+                      {isFirstDay ? event.title : '•••'}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
