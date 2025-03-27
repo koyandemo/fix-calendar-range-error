@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,19 +36,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -97,5 +91,57 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    border-collapse: collapse;
+    width: 100%;
+  }
+  
+  .calendar-cell {
+    @apply border border-border min-h-[120px] relative p-1;
+  }
+  
+  .calendar-header {
+    @apply font-medium text-center py-2 border-b border-border;
+  }
+  
+  .calendar-day-number {
+    @apply text-sm font-medium mb-1;
+  }
+  
+  .calendar-event {
+    @apply text-xs rounded px-1 py-0.5 mb-1 bg-calendar-event text-calendar-event-foreground truncate;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .calendar-today {
+    @apply bg-blue-50;
+  }
+  
+  .calendar-today .calendar-day-number {
+    @apply inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-500 text-white;
+  }
+  
+  .calendar-controls {
+    @apply flex items-center justify-between mb-4;
+  }
+  
+  .calendar-controls button {
+    @apply p-2 rounded-full hover:bg-gray-100 transition-colors;
+  }
+  
+  .calendar-container {
+    @apply bg-white rounded-lg shadow-sm border border-border overflow-hidden;
+    max-width: 1200px;
+    margin: 0 auto;
   }
 }
